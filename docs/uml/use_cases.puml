@@ -1,0 +1,14 @@
+@startuml
+left to right direction
+actor Patient
+actor Medecin as Doctor
+actor Admin
+Patient --> (S'inscrire)
+Patient --> (Prendre RDV)
+Patient --> (Consulter historique)
+Patient --> (Participer à téléconsultation vidéo)
+Doctor --> (Gérer calendrier)
+Doctor --> (Effectuer consultation vidéo)
+Doctor --> (Prescrire médicaments)
+Admin --> (Gérer utilisateurs)
+@enduml

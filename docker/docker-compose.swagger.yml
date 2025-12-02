@@ -1,0 +1,12 @@
+services:
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    ports:
+      - "8080:8080"
+    environment:
+      API_URL: /openapi.json
+    volumes:
+      - type: bind
+        source: C:\TeleconsultationProject\teleconsultation_project\docs\openapi.json
+        target: /usr/share/nginx/html/openapi.json
+        read_only: true

@@ -1,0 +1,115 @@
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+
+const db = require('./models');
+
+const app = express();
+app.use(cors());
+app.use(bodyParser.json());
+
+// auth/register
+app.post('/api/auth/register', async (req, res) => {
+  const { email, password, role } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'email_password_required' });
+  const bcrypt = require('bcrypt');
+  const hash = await bcrypt.hash(password, 10);
+  try {
+    const user = await db.User.create({ email, password_hash: hash, role: role || 'PATIENT' });
+    return res.status(201).json({ id: user.id, email: user.email, role: user.role });
+  } catch (err) {
+    return res.status(400).json({ error: 'user_creation_failed', details: err.message });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password)
+    return res.status(400).json({ error: 'email_password_required' });
+
+  const user = await db.User.findOne({ where: { email } });
+  if (!user) return res.status(401).json({ error: 'invalid_credentials' });
+
+  const bcrypt = require('bcrypt');
+  const ok = await bcrypt.compare(password, user.password_hash);
+  if (!ok) return res.status(401).json({ error: 'invalid_credentials' });
+
+  // --- JWT ---
+  const { generateAccessToken, generateRefreshToken } = require("./utils/jwt");
+
+  const payload = { id: user.id, email: user.email, role: user.role };
+
+  const accessToken = generateAccessToken(payload);
+  const refreshToken = generateRefreshToken(payload);
+
+  // Pour le PoC, on stocke les refresh tokens en mémoire
+  global.refreshTokens = global.refreshTokens || [];
+  global.refreshTokens.push(refreshToken);
+
+  res.json({
+    user: payload,
+    accessToken,
+    refreshToken
+  });
+});
+
+app.get('/api/doctors', async (req, res) => {
+  const docs = await db.Doctor.findAll({ include: [{ model: db.User, as: 'user', attributes: ['email'] }] });
+  res.json(docs);
+});
+
+app.post('/api/appointments', async (req, res) => {
+  const { patientId, doctorId, startTime } = req.body;
+  try {
+    const appt = await db.Appointment.create({ patientId, doctorId, start_time: startTime, status: 'confirmed' });
+    res.status(201).json({ id: appt.id });
+  } catch (err) {
+    res.status(400).json({ error: 'appointment_failed', details: err.message });
+  }
+});
+
+app.post("/api/auth/refresh", (req, res) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) return res.status(400).json({ error: "missing_refresh_token" });
+
+  if (!global.refreshTokens || !global.refreshTokens.includes(refreshToken))
+    return res.status(403).json({ error: "invalid_refresh_token" });
+
+  const { verifyRefreshToken, generateAccessToken } = require("./utils/jwt");
+
+  try {
+    const decoded = verifyRefreshToken(refreshToken);
+    const accessToken = generateAccessToken({
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role,
+    });
+
+    res.json({ accessToken });
+  } catch (err) {
+    return res.status(403).json({ error: "expired_or_invalid_refresh_token" });
+  }
+});
+
+const auth = require('./middleware/auth');
+
+app.get('/api/profile', auth, async (req, res) => {
+  const user = await db.User.findByPk(req.user.id);
+  res.json({ id: user.id, email: user.email, role: user.role });
+});
+
+// Sync DB and start server
+const port = process.env.PORT || 3000;
+(async () => {
+  try {
+    await db.sequelize.authenticate();
+    console.log('DB connection OK');
+    await db.sequelize.sync({ alter: true }); // pour PoC ; en prod utilisez des migrations
+    app.listen(port, () => console.log('Server started on port', port));
+  } catch (err) {
+    console.error('Unable to start server:', err);
+    process.exit(1);
+  }
+})();

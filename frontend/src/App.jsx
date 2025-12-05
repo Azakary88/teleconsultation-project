@@ -11,6 +11,8 @@ import { useTranslation } from 'react-i18next'
 import DoctorDashboard from './pages/DoctorDashboard';
 import PatientDashboard from './pages/PatientDashboard';
 import PrivateRoute from './components/PrivateRoute';
+import AppointmentDetails from './pages/AppointmentDetails';
+
 
 
 
@@ -40,6 +42,7 @@ export default function App(){
           <Route path='/create-appointment' element={<CreateAppointment/>} />
           <Route path='/appointments' element={<Appointments/>} />
           <Route path='/profile' element={<Profile/>} />
+          <Route path="/appointments/:id" element={<AppointmentDetails />} />
         </Routes>
       </main>
     </div>

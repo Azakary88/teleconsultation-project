@@ -1,3 +1,4 @@
+// frontend/src/pages/Appointments.jsx
 import React, {useEffect, useState} from 'react'
 import api from '../utils/api'
 

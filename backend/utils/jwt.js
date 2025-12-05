@@ -1,23 +1,27 @@
-const jwt = require("jsonwebtoken");
-require("dotenv").config();
+// backend/utils/jwt.js
+const jwt = require('jsonwebtoken');
 
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "dev_access_secret_123";
-const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || "dev_refresh_secret_456";
+const ACCESS_SECRET = process.env.ACCESS_TOKEN_SECRET || 'change_this_in_prod';
+const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET || 'change_this_too';
 
-module.exports = {
-  generateAccessToken(payload) {
-    return jwt.sign(payload, ACCESS_TOKEN_SECRET, { expiresIn: "15m" });
-  },
+// expire examples
+const ACCESS_EXPIRES = process.env.ACCESS_EXPIRES || '15m';
+const REFRESH_EXPIRES = process.env.REFRESH_EXPIRES || '7d';
 
-  generateRefreshToken(payload) {
-    return jwt.sign(payload, REFRESH_TOKEN_SECRET, { expiresIn: "7d" });
-  },
+function generateAccessToken(payload) {
+  return jwt.sign(payload, ACCESS_SECRET, { expiresIn: ACCESS_EXPIRES });
+}
 
-  verifyAccessToken(token) {
-    return jwt.verify(token, ACCESS_TOKEN_SECRET);
-  },
+function generateRefreshToken(payload) {
+  return jwt.sign(payload, REFRESH_SECRET, { expiresIn: REFRESH_EXPIRES });
+}
 
-  verifyRefreshToken(token) {
-    return jwt.verify(token, REFRESH_TOKEN_SECRET);
-  }
-};
+function verifyRefreshToken(token) {
+  return jwt.verify(token, REFRESH_SECRET);
+}
+
+function verifyAccessToken(token) {
+  return jwt.verify(token, ACCESS_SECRET);
+}
+
+module.exports = { generateAccessToken, generateRefreshToken, verifyRefreshToken, verifyAccessToken };
